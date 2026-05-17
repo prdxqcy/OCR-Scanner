@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Screen Number Scanner</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="overlay">
+      <section class="card">
+        <header class="titlebar">
+          <div class="brand">
+            <span class="brand-main">FARMTRACKS</span>
+            <span class="brand-sub">Narwashi</span>
+          </div>
+          <div class="titlebar-badges">
+            <button id="openSettingsButton" class="icon-button titlebar-button" type="button" aria-label="Open settings">#</button>
+            <button id="minimizeWindowButton" class="icon-button titlebar-button" type="button" aria-label="Minimize window">-</button>
+            <button id="closeWindowButton" class="icon-button titlebar-button" type="button" aria-label="Close window">x</button>
+          </div>
+        </header>
+
+        <section class="nav-strip">
+          <button class="nav-tab nav-tab-active" type="button">NARWASHI</button>
+          <button class="nav-tab" type="button">ARAHUR</button>
+        </section>
+
+        <section class="scanner-hero">
+          <button id="toggleScannerButton" class="scan-pill" type="button">
+            <span id="scanPillTitle" class="scan-pill-title">Scanning</span>
+          </button>
+          <div class="scan-meta">
+            <span id="clockValue" class="clock-value"></span>
+          </div>
+          <div class="scan-side-actions">
+            <span id="scannerState" class="mini-action">Ready</span>
+            <button id="gearButton" class="icon-button mini-icon-button" type="button" aria-label="Open settings">#</button>
+          </div>
+        </section>
+
+        <section class="tracker-panel">
+          <div id="trackerCards" class="tracker-list"></div>
+        </section>
+
+        <section class="action-row">
+          <button id="toggleScannerSecondaryButton" class="action-button action-button-muted" type="button">Stop Scanner <span id="hotkeyBadge">F8</span></button>
+          <label class="interval action-button action-button-primary">
+            <span class="button-heading">Scan Speed</span>
+            <div class="input-wrap">
+              <input id="pollIntervalInput" type="number" min="150" step="50" />
+              <span class="suffix">ms</span>
+            </div>
+          </label>
+        </section>
+
+        <a class="utility-link" href="#" onclick="return false;">Count from zero</a>
+
+        <section class="assign-panel">
+          <div class="assign-title">Set bag area -- fix detection</div>
+          <div id="trackerButtons" class="assign-buttons"></div>
+        </section>
+
+        <section class="footer-strip">
+          <div class="footer-meta">
+            <span class="footer-value">Round 1</span>
+          </div>
+          <div class="footer-meta">
+            <span id="sessionCount" class="footer-value">0 items this session</span>
+          </div>
+          <div class="footer-meta footer-meta-right">
+            <span class="footer-button">Manual input</span>
+          </div>
+        </section>
+
+        <section class="panel panel-compact">
+          <div class="panel-header">
+            <span class="label">Area Map</span>
+            <span id="panelScannerState" class="panel-status">Waiting for areas</span>
+          </div>
+          <div id="regionList" class="region-list"></div>
+        </section>
+
+        <section class="panel panel-compact">
+          <div class="panel-header">
+            <span class="label">2 Minute History</span>
+            <span class="panel-status">Session only</span>
+          </div>
+          <div id="historyOutput" class="history-output"></div>
+        </section>
+
+        <section class="panel panel-compact">
+          <div class="panel-header">
+            <span class="label">Scanner Activity</span>
+          </div>
+          <div id="logOutput" class="log-output"></div>
+        </section>
+      </section>
+
+      <div id="settingsModal" class="settings-modal hidden">
+        <div class="settings-card">
+          <div class="settings-header">
+            <strong>Overlay Settings</strong>
+            <button id="closeSettingsButton" class="icon-button settings-close" type="button" aria-label="Close settings">x</button>
+          </div>
+
+          <label class="settings-field">
+            <span>Hide / Unhide Hotkey</span>
+            <select id="hotkeySelect">
+              <option value="F6">F6</option>
+              <option value="F7">F7</option>
+              <option value="F8">F8</option>
+              <option value="F9">F9</option>
+              <option value="F10">F10</option>
+              <option value="F11">F11</option>
+              <option value="F12">F12</option>
+            </select>
+          </label>
+
+          <label class="settings-field">
+            <span>Overlay Opacity</span>
+            <input id="opacitySlider" type="range" min="35" max="100" step="1" />
+            <div class="settings-inline">
+              <span id="opacityValue">100%</span>
+            </div>
+          </label>
+
+          <button id="saveSettingsButton" class="settings-save" type="button">Save Settings</button>
+        </div>
+      </div>
+    </main>
+    <script src="./renderer.js"></script>
+  </body>
+</html>

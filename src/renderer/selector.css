@@ -1,0 +1,49 @@
+html,
+body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  cursor: crosshair;
+  user-select: none;
+  background: rgba(5, 10, 16, 0.16);
+  font-family: "Segoe UI", Tahoma, sans-serif;
+}
+
+.selector-root {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.instructions {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  z-index: 5;
+  display: grid;
+  gap: 4px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(10, 16, 26, 0.88);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.instruction-label {
+  color: rgba(255, 255, 255, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.72rem;
+}
+
+.selection-box {
+  position: absolute;
+  border: 2px solid #63d2ff;
+  background: rgba(99, 210, 255, 0.18);
+  box-shadow: 0 0 0 9999px rgba(6, 10, 16, 0.3);
+}
+
+.hidden {
+  display: none;
+}
