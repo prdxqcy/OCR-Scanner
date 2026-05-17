@@ -1,6 +1,6 @@
 {
   "name": "screen-number-scanner",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "prdxqcy",
   "description": "Electron overlay app with a Python OCR scanner for live number tracking.",
   "main": "src/main.js",
