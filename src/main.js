@@ -107,6 +107,7 @@ function createOverlayWindow() {
     alwaysOnTop: true,
     focusable: true,
     hasShadow: true,
+    icon: path.join(__dirname, "..", "build", "icon.ico"),
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -226,6 +227,14 @@ function registerShortcuts() {
 }
 
 function getPythonCommand() {
+  const bundledWorker = path.join(process.resourcesPath, "python-worker", "scanner-worker.exe");
+  if (app.isPackaged && fs.existsSync(bundledWorker)) {
+    return {
+      command: bundledWorker,
+      args: []
+    };
+  }
+
   if (process.platform === "win32") {
     return {
       command: "py",
@@ -248,7 +257,8 @@ function restartPythonWorker() {
   const python = getPythonCommand();
   pythonProcess = spawn(python.command, python.args, {
     cwd: path.join(__dirname, ".."),
-    stdio: ["pipe", "pipe", "pipe"]
+    stdio: ["pipe", "pipe", "pipe"],
+    windowsHide: true
   });
 
   pythonProcess.stdout.on("data", (chunk) => {

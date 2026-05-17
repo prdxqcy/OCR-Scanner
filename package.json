@@ -7,18 +7,26 @@
   "scripts": {
     "start": "node scripts/start-electron.js",
     "postinstall": "electron-builder install-app-deps",
-    "package": "electron-builder --dir",
-    "dist": "electron-builder",
-    "release": "electron-builder --publish always"
+    "build:worker": "node scripts/build-python-worker.js",
+    "package": "npm run build:worker && electron-builder --dir",
+    "dist": "npm run build:worker && electron-builder",
+    "release": "npm run build:worker && electron-builder --publish always"
   },
   "build": {
     "appId": "com.prdxqcy.ocrscanner",
     "productName": "OCR Scanner",
+    "icon": "icon.ico",
     "files": [
       "src/**/*",
-      "python/**/*",
       "scripts/**/*",
+      "build/icon.ico",
       "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "python/dist/scanner-worker",
+        "to": "python-worker"
+      }
     ],
     "artifactName": "${productName}-Setup-${version}.${ext}",
     "publish": [
@@ -29,7 +37,8 @@
       }
     ],
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "icon": "icon.ico"
     },
     "nsis": {
       "oneClick": false,

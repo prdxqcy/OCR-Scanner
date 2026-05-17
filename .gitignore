@@ -2,6 +2,8 @@ node_modules/
 dist/
 release/
 out/
+python/build/
+python/dist/
 __pycache__/
 *.pyc
 *.log
