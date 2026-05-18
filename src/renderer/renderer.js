@@ -22,6 +22,7 @@ const hotkeyBadge = document.getElementById("hotkeyBadge");
 const scanPillTitle = document.getElementById("scanPillTitle");
 const toggleScannerButton = document.getElementById("toggleScannerButton");
 const toggleScannerSecondaryButton = document.getElementById("toggleScannerSecondaryButton");
+const resetSessionButton = document.getElementById("resetSessionButton");
 const gearButton = document.getElementById("gearButton");
 const openSettingsButton = document.getElementById("openSettingsButton");
 const minimizeWindowButton = document.getElementById("minimizeWindowButton");
@@ -40,7 +41,9 @@ const trackerState = Object.fromEntries(
       ...tracker,
       region: null,
       currentValue: null,
-      delta: 0
+      delta: 0,
+      sessionGain: 0,
+      gainSinceSnapshot: 0
     }
   ])
 );
@@ -125,9 +128,9 @@ function snapshotHistory() {
   }
 
   const positiveDeltas = {
-    crystals: Math.max(0, Number(trackerState.crystals.delta) || 0),
-    speedPotions: Math.max(0, Number(trackerState.speedPotions.delta) || 0),
-    arcanes: Math.max(0, Number(trackerState.arcanes.delta) || 0)
+    crystals: Math.max(0, Number(trackerState.crystals.gainSinceSnapshot) || 0),
+    speedPotions: Math.max(0, Number(trackerState.speedPotions.gainSinceSnapshot) || 0),
+    arcanes: Math.max(0, Number(trackerState.arcanes.gainSinceSnapshot) || 0)
   };
 
   const hasPositiveGain = Object.values(positiveDeltas).some((value) => value > 0);
@@ -146,6 +149,10 @@ function snapshotHistory() {
   persistHistory();
   renderHistory();
   appendLog("Saved 2 minute history snapshot.");
+
+  for (const tracker of TRACKER_ORDER) {
+    trackerState[tracker.key].gainSinceSnapshot = 0;
+  }
 }
 
 function setScannerState(text) {
@@ -169,6 +176,21 @@ function updateHotkeyDisplay() {
   hotkeyBadge.textContent = currentHotkey;
 }
 
+function resetSessionState() {
+  for (const tracker of TRACKER_ORDER) {
+    trackerState[tracker.key].currentValue = null;
+    trackerState[tracker.key].delta = 0;
+    trackerState[tracker.key].sessionGain = 0;
+    trackerState[tracker.key].gainSinceSnapshot = 0;
+  }
+
+  historyRows = [];
+  persistHistory();
+  renderHistory();
+  renderTrackers();
+  appendLog("Session reset.");
+}
+
 function renderTrackers() {
   trackerCards.innerHTML = TRACKER_ORDER.map((tracker) => {
     const state = trackerState[tracker.key];
@@ -179,7 +201,7 @@ function renderTrackers() {
         </div>
         <div class="tracker-stats">
           <strong class="tracker-current">${formatNumber(state.currentValue)}</strong>
-          <strong class="tracker-delta ${deltaClass(state.delta)}">${state.delta > 0 ? "+" : ""}${formatNumber(state.delta)}</strong>
+          <strong class="tracker-delta ${deltaClass(state.sessionGain)}">${state.sessionGain > 0 ? "+" : ""}${formatNumber(state.sessionGain)}</strong>
         </div>
       </article>
     `;
@@ -252,6 +274,10 @@ toggleScannerSecondaryButton.addEventListener("click", async () => {
   await setScannerEnabled(!scannerEnabled);
 });
 
+resetSessionButton.addEventListener("click", () => {
+  resetSessionState();
+});
+
 gearButton.addEventListener("click", openSettings);
 openSettingsButton.addEventListener("click", openSettings);
 closeSettingsButton.addEventListener("click", closeSettings);
@@ -295,6 +321,10 @@ window.scannerApi.onScannerEvent((event) => {
 
     state.currentValue = event.currentValue;
     state.delta = event.delta ?? 0;
+    if (state.delta > 0) {
+      state.sessionGain += state.delta;
+      state.gainSinceSnapshot += state.delta;
+    }
     renderTrackers();
     setScannerState(`scanning ${state.label}`);
     if (event.rawText) {

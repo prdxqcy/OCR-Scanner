@@ -10,7 +10,7 @@ const CONFIG_DEFAULTS = {
     speedPotions: { key: "speedPotions", label: "Speed Potions", region: null },
     arcanes: { key: "arcanes", label: "Arcanes", region: null }
   },
-  pollIntervalMs: 650,
+  pollIntervalMs: 10000,
   hideHotkey: "F8",
   opacityPercent: 100,
   scannerEnabled: true
@@ -25,6 +25,10 @@ let configPath;
 let store = { ...CONFIG_DEFAULTS };
 let pendingSelectionTrackerKey = null;
 let updateCheckTimer = null;
+
+function getAppIconPath() {
+  return path.join(__dirname, "..", "build", "icon.ico");
+}
 
 function normalizeTrackers(trackers) {
   const nextTrackers = JSON.parse(JSON.stringify(CONFIG_DEFAULTS.trackers));
@@ -94,20 +98,20 @@ function setTrackerRegion(trackerKey, region) {
 
 function createOverlayWindow() {
   overlayWindow = new BrowserWindow({
-    width: 440,
-    height: 360,
+    width: 370,
+    height: 690,
     x: 40,
     y: 40,
     frame: false,
     transparent: true,
     resizable: true,
-    minWidth: 360,
-    minHeight: 280,
+    minWidth: 340,
+    minHeight: 620,
     skipTaskbar: false,
     alwaysOnTop: true,
     focusable: true,
     hasShadow: true,
-    icon: path.join(__dirname, "..", "build", "icon.ico"),
+    icon: getAppIconPath(),
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -117,7 +121,7 @@ function createOverlayWindow() {
 
   overlayWindow.setAlwaysOnTop(true, "screen-saver");
   overlayWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-  overlayWindow.setMinimumSize(360, 280);
+  overlayWindow.setMinimumSize(340, 620);
   overlayWindow.setOpacity(Math.max(0.35, Math.min(1, getStoreValue("opacityPercent") / 100)));
   overlayWindow.loadFile(path.join(__dirname, "renderer", "index.html"));
   overlayWindow.on("closed", () => {
@@ -172,6 +176,7 @@ function createSelectorWindow(trackerKey) {
     skipTaskbar: true,
     alwaysOnTop: true,
     focusable: true,
+    icon: getAppIconPath(),
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -354,7 +359,7 @@ ipcMain.handle("app:start-region-select", async (_event, trackerKey) => {
 });
 
 ipcMain.handle("app:set-poll-interval", async (_event, pollIntervalMs) => {
-  const parsed = Math.max(150, Number(pollIntervalMs) || 650);
+  const parsed = Math.max(150, Number(pollIntervalMs) || CONFIG_DEFAULTS.pollIntervalMs);
   setStoreValue("pollIntervalMs", parsed);
   sendConfigToPython();
   return { ok: true, pollIntervalMs: parsed };

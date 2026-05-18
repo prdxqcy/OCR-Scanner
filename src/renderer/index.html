@@ -54,7 +54,9 @@
           </label>
         </section>
 
-        <a class="utility-link" href="#" onclick="return false;">Count from zero</a>
+        <section class="utility-row">
+          <button id="resetSessionButton" class="utility-button utility-button-muted" type="button">Reset Session</button>
+        </section>
 
         <section class="assign-panel">
           <div class="assign-title">Set bag area -- fix detection</div>
@@ -73,27 +75,29 @@
           </div>
         </section>
 
-        <section class="panel panel-compact">
-          <div class="panel-header">
-            <span class="label">Area Map</span>
-            <span id="panelScannerState" class="panel-status">Waiting for areas</span>
-          </div>
-          <div id="regionList" class="region-list"></div>
-        </section>
+        <section class="panel-grid">
+          <section class="panel panel-compact">
+            <div class="panel-header">
+              <span class="label">Area Map</span>
+              <span id="panelScannerState" class="panel-status">Waiting for areas</span>
+            </div>
+            <div id="regionList" class="region-list"></div>
+          </section>
 
-        <section class="panel panel-compact">
-          <div class="panel-header">
-            <span class="label">2 Minute History</span>
-            <span class="panel-status">Session only</span>
-          </div>
-          <div id="historyOutput" class="history-output"></div>
-        </section>
+          <section class="panel panel-compact">
+            <div class="panel-header">
+              <span class="label">2 Minute History</span>
+              <span class="panel-status">Session only</span>
+            </div>
+            <div id="historyOutput" class="history-output"></div>
+          </section>
 
-        <section class="panel panel-compact">
-          <div class="panel-header">
-            <span class="label">Scanner Activity</span>
-          </div>
-          <div id="logOutput" class="log-output"></div>
+          <section class="panel panel-compact panel-wide">
+            <div class="panel-header">
+              <span class="label">Scanner Activity</span>
+            </div>
+            <div id="logOutput" class="log-output"></div>
+          </section>
         </section>
       </section>
 

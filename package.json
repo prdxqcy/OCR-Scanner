@@ -1,6 +1,6 @@
 {
   "name": "screen-number-scanner",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "author": "prdxqcy",
   "description": "Electron overlay app with a Python OCR scanner for live number tracking.",
   "main": "src/main.js",
@@ -15,11 +15,10 @@
   "build": {
     "appId": "com.prdxqcy.ocrscanner",
     "productName": "OCR Scanner",
-    "icon": "icon.ico",
     "files": [
+      "build/icon.ico",
       "src/**/*",
       "scripts/**/*",
-      "build/icon.ico",
       "package.json"
     ],
     "extraResources": [
@@ -48,16 +47,19 @@
     ],
     "win": {
       "target": "nsis",
-      "icon": "icon.ico"
+      "icon": "build/icon.ico"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "perMachine": false,
-      "createDesktopShortcut": false,
-      "createStartMenuShortcut": false,
-      "runAfterFinish": false,
-      "include": "build/installer.nsh"
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "runAfterFinish": true,
+      "include": "build/installer.nsh",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico"
     }
   },
   "dependencies": {
