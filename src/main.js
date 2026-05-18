@@ -227,11 +227,12 @@ function registerShortcuts() {
 }
 
 function getPythonCommand() {
-  const bundledWorker = path.join(process.resourcesPath, "python-worker", "scanner-worker.exe");
-  if (app.isPackaged && fs.existsSync(bundledWorker)) {
+  const bundledPython = path.join(process.resourcesPath, "python-runtime", "Scripts", "python.exe");
+  const bundledScanner = path.join(process.resourcesPath, "python-src", "scanner.py");
+  if (app.isPackaged && fs.existsSync(bundledPython) && fs.existsSync(bundledScanner)) {
     return {
-      command: bundledWorker,
-      args: []
+      command: bundledPython,
+      args: [bundledScanner]
     };
   }
 
@@ -248,6 +249,14 @@ function getPythonCommand() {
   };
 }
 
+function getPythonWorkingDirectory() {
+  if (app.isPackaged) {
+    return process.resourcesPath;
+  }
+
+  return path.join(__dirname, "..");
+}
+
 function restartPythonWorker() {
   if (pythonProcess) {
     pythonProcess.kill();
@@ -256,9 +265,16 @@ function restartPythonWorker() {
 
   const python = getPythonCommand();
   pythonProcess = spawn(python.command, python.args, {
-    cwd: path.join(__dirname, ".."),
+    cwd: getPythonWorkingDirectory(),
     stdio: ["pipe", "pipe", "pipe"],
     windowsHide: true
+  });
+
+  pythonProcess.on("error", (error) => {
+    sendOverlayEvent({
+      type: "error",
+      message: `Scanner failed to start: ${error.message}`
+    });
   });
 
   pythonProcess.stdout.on("data", (chunk) => {
@@ -280,9 +296,14 @@ function restartPythonWorker() {
   });
 
   pythonProcess.stderr.on("data", (chunk) => {
+    const message = chunk.toString().trim();
+    if (!message) {
+      return;
+    }
+
     sendOverlayEvent({
       type: "error",
-      message: chunk.toString().trim()
+      message
     });
   });
 

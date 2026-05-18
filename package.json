@@ -1,16 +1,16 @@
 {
   "name": "screen-number-scanner",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "author": "prdxqcy",
   "description": "Electron overlay app with a Python OCR scanner for live number tracking.",
   "main": "src/main.js",
   "scripts": {
     "start": "node scripts/start-electron.js",
     "postinstall": "electron-builder install-app-deps",
-    "build:worker": "node scripts/build-python-worker.js",
-    "package": "npm run build:worker && electron-builder --dir",
-    "dist": "npm run build:worker && electron-builder",
-    "release": "npm run build:worker && electron-builder --publish always"
+    "build:runtime": "node scripts/build-python-runtime.js",
+    "package": "npm run build:runtime && electron-builder --dir",
+    "dist": "npm run build:runtime && electron-builder",
+    "release": "npm run build:runtime && electron-builder --publish always"
   },
   "build": {
     "appId": "com.prdxqcy.ocrscanner",
@@ -24,8 +24,18 @@
     ],
     "extraResources": [
       {
-        "from": "python/dist/scanner-worker",
-        "to": "python-worker"
+        "from": "python/runtime",
+        "to": "python-runtime"
+      },
+      {
+        "from": "python/scanner.py",
+        "to": "python-src/scanner.py"
+      }
+    ],
+    "extraFiles": [
+      {
+        "from": "build/OCR Scanner Launcher.vbs",
+        "to": "OCR Scanner Launcher.vbs"
       }
     ],
     "artifactName": "${productName}-Setup-${version}.${ext}",
@@ -44,8 +54,10 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "perMachine": false,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
+      "createDesktopShortcut": false,
+      "createStartMenuShortcut": false,
+      "runAfterFinish": false,
+      "include": "build/installer.nsh"
     }
   },
   "dependencies": {

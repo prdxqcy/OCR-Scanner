@@ -31,9 +31,6 @@ jobs:
       - name: Install Node dependencies
         run: npm install
 
-      - name: Install Python dependencies
-        run: py -3.11 -m pip install -r python/requirements.txt
-
       - name: Build and publish release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

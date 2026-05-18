@@ -4,6 +4,7 @@ release/
 out/
 python/build/
 python/dist/
+python/runtime/
 __pycache__/
 *.pyc
 *.log

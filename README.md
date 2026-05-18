@@ -53,4 +53,4 @@ Electron overlay app with a Python OCR worker that watches a selected screen are
 - `npm run release` publishes a GitHub release when `GH_TOKEN` is available.
 - The packaged app checks GitHub releases for updates and downloads them automatically.
 - The included workflow in `.github/workflows/release.yml` publishes installers when you push a tag like `v1.0.1`.
-- The build now bundles the OCR worker into the installer so end users do not need a separate Python install.
+- The build now bundles a private Python runtime into the installer so end users do not need a separate Python install.
