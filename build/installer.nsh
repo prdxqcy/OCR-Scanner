@@ -1,3 +1,12 @@
+!macro preInit
+  SetRegView 64
+  WriteRegExpandStr HKCU "${INSTALL_REGISTRY_KEY}" InstallLocation "$LOCALAPPDATA\Programs\FarmTracker"
+  WriteRegExpandStr HKLM "${INSTALL_REGISTRY_KEY}" InstallLocation "$LOCALAPPDATA\Programs\FarmTracker"
+  SetRegView 32
+  WriteRegExpandStr HKCU "${INSTALL_REGISTRY_KEY}" InstallLocation "$LOCALAPPDATA\Programs\FarmTracker"
+  WriteRegExpandStr HKLM "${INSTALL_REGISTRY_KEY}" InstallLocation "$LOCALAPPDATA\Programs\FarmTracker"
+!macroend
+
 !macro customInstall
   Delete "$DESKTOP\FarmTracker.lnk"
   Delete "$SMPROGRAMS\FarmTracker.lnk"

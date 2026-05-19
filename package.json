@@ -1,8 +1,8 @@
 {
-  "name": "screen-number-scanner",
-  "version": "1.0.4",
+  "name": "farmtracker",
+  "version": "1.0.5",
   "author": "prdxqcy",
-  "description": "Electron overlay app with a Python OCR scanner for live number tracking.",
+  "description": "FarmTracker overlay app with a Python OCR scanner for live number tracking.",
   "main": "src/main.js",
   "scripts": {
     "start": "node scripts/start-electron.js",
@@ -13,7 +13,7 @@
     "release": "npm run build:runtime && electron-builder --publish always"
   },
   "build": {
-    "appId": "com.prdxqcy.ocrscanner",
+    "appId": "com.prdxqcy.farmtracker",
     "productName": "FarmTracker",
     "files": [
       "build/icon.ico",
@@ -55,6 +55,8 @@
       "perMachine": false,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
+      "shortcutName": "FarmTracker",
+      "uninstallDisplayName": "FarmTracker",
       "runAfterFinish": true,
       "include": "build/installer.nsh",
       "installerIcon": "build/icon.ico",

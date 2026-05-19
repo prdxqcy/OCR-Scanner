@@ -232,7 +232,11 @@ function registerShortcuts() {
 }
 
 function getPythonCommand() {
-  const bundledPython = path.join(process.resourcesPath, "python-runtime", "Scripts", "python.exe");
+  const bundledPython = path.join(
+    process.resourcesPath,
+    "python-runtime",
+    process.platform === "win32" ? "python.exe" : path.join("bin", "python3")
+  );
   const bundledScanner = path.join(process.resourcesPath, "python-src", "scanner.py");
   if (app.isPackaged && fs.existsSync(bundledPython) && fs.existsSync(bundledScanner)) {
     return {
