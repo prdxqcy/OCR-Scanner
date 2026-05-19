@@ -1,6 +1,6 @@
 {
   "name": "farmtracker",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "author": "prdxqcy",
   "description": "FarmTracker overlay app with a Python OCR scanner for live number tracking.",
   "main": "src/main.js",
@@ -51,8 +51,8 @@
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "perMachine": false,
+      "allowToChangeInstallationDirectory": false,
+      "perMachine": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "FarmTracker",
