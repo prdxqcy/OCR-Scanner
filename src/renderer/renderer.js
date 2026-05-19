@@ -22,7 +22,6 @@ const hotkeyBadge = document.getElementById("hotkeyBadge");
 const scanPillTitle = document.getElementById("scanPillTitle");
 const toggleScannerButton = document.getElementById("toggleScannerButton");
 const toggleScannerSecondaryButton = document.getElementById("toggleScannerSecondaryButton");
-const autoDetectButton = document.getElementById("autoDetectButton");
 const resetSessionButton = document.getElementById("resetSessionButton");
 const gearButton = document.getElementById("gearButton");
 const openSettingsButton = document.getElementById("openSettingsButton");
@@ -53,7 +52,6 @@ let scannerEnabled = true;
 let currentHotkey = "F8";
 let historyRows = [];
 let historyIntervalId;
-let autoDetectAttempted = false;
 
 function formatNumber(value) {
   if (value === null || value === undefined || Number.isNaN(Number(value))) {
@@ -250,22 +248,6 @@ async function setScannerEnabled(nextValue) {
   appendLog(scannerEnabled ? "Scanner started manually." : "Scanner stopped manually.");
 }
 
-async function runAutoDetect(options = {}) {
-  const result = await window.scannerApi.autoDetectRegions(options);
-  if (!result.ok) {
-    appendLog(`Auto detect failed: ${result.message}`);
-    return result;
-  }
-
-  if ((result.applied || []).length === 0) {
-    appendLog("Auto detect found no matching saved item templates.");
-    return result;
-  }
-
-  appendLog(`Auto detect updated ${result.applied.length} area${result.applied.length === 1 ? "" : "s"}.`);
-  return result;
-}
-
 function openSettings() {
   settingsModal.classList.remove("hidden");
 }
@@ -294,11 +276,6 @@ toggleScannerSecondaryButton.addEventListener("click", async () => {
 
 resetSessionButton.addEventListener("click", () => {
   resetSessionState();
-});
-
-autoDetectButton.addEventListener("click", async () => {
-  appendLog("Running template auto detect...");
-  await runAutoDetect({ overwriteExisting: true });
 });
 
 gearButton.addEventListener("click", openSettings);
@@ -365,27 +342,7 @@ window.scannerApi.onScannerEvent((event) => {
     state.region = event.region;
     renderTrackers();
     setScannerState(`${state.label} ready`);
-    if (event.autoDetected) {
-      const confidence = event.score ? ` (${Math.round(event.score * 100)}% match)` : "";
-      appendLog(`${state.label} auto-detected${confidence}.`);
-    } else {
-      appendLog(`${state.label} area updated.`);
-    }
-    return;
-  }
-
-  if (event.type === "template-learned") {
-    const state = trackerState[event.trackerKey];
-    if (state) {
-      appendLog(`${state.label} template saved for future auto detect.`);
-    }
-    return;
-  }
-
-  if (event.type === "auto-detect-summary") {
-    if (!event.ok && event.message) {
-      appendLog(`Auto detect error: ${event.message}`);
-    }
+    appendLog(`${state.label} area updated.`);
     return;
   }
 
@@ -449,15 +406,6 @@ async function init() {
   historyIntervalId = setInterval(snapshotHistory, HISTORY_INTERVAL_MS);
   setScannerState(scannerEnabled ? "waiting for areas" : "paused");
   appendLog("Overlay ready.");
-
-  if (!autoDetectAttempted) {
-    autoDetectAttempted = true;
-    const hasAnyRegion = TRACKER_ORDER.some((tracker) => trackerState[tracker.key].region);
-    if (!hasAnyRegion) {
-      appendLog("Trying template auto detect...");
-      await runAutoDetect({ overwriteExisting: false });
-    }
-  }
 }
 
 window.addEventListener("beforeunload", () => {

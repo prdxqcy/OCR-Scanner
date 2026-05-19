@@ -3,7 +3,6 @@ const { contextBridge, ipcRenderer } = require("electron");
 contextBridge.exposeInMainWorld("scannerApi", {
   getState: () => ipcRenderer.invoke("app:get-state"),
   startRegionSelect: (trackerKey) => ipcRenderer.invoke("app:start-region-select", trackerKey),
-  autoDetectRegions: (options) => ipcRenderer.invoke("app:auto-detect-regions", options),
   setPollInterval: (value) => ipcRenderer.invoke("app:set-poll-interval", value),
   setScannerEnabled: (value) => ipcRenderer.invoke("app:set-scanner-enabled", value),
   updateSettings: (settings) => ipcRenderer.invoke("app:update-settings", settings),

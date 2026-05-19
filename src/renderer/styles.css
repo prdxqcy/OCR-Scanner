@@ -370,12 +370,6 @@ input {
   color: var(--accent);
 }
 
-.utility-button-primary {
-  background: linear-gradient(180deg, rgba(242, 215, 161, 0.98), rgba(231, 199, 136, 0.96));
-  color: #2d1b05;
-  border-color: rgba(236, 207, 152, 0.9);
-}
-
 .assign-panel {
   padding: 0 9px 10px;
 }
