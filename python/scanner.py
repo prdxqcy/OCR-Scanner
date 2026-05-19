@@ -1,4 +1,5 @@
 import json
+import os
 import queue
 import re
 import sys
@@ -7,6 +8,7 @@ import time
 from dataclasses import dataclass
 from typing import Optional
 
+import cv2
 import mss
 import numpy as np
 from PIL import Image, ImageEnhance, ImageFilter, ImageOps
@@ -34,6 +36,7 @@ class ScannerConfig:
     trackers: dict
     poll_interval_ms: int = 650
     scanner_enabled: bool = True
+    templates_dir: str = ""
 
 
 config = ScannerConfig(trackers={})
@@ -45,6 +48,10 @@ ocr = RapidOCR()
 def emit(payload: dict) -> None:
     sys.stdout.write(json.dumps(payload) + "\n")
     sys.stdout.flush()
+
+
+def emit_error(message: str) -> None:
+    emit({"type": "error", "message": message})
 
 
 def resize_image(image: Image.Image, scale: int) -> Image.Image:
@@ -68,6 +75,203 @@ def pad_region(region: dict) -> dict:
         "width": max(1, right - left),
         "height": max(1, bottom - top),
     }
+
+
+def build_template_capture_region(region: dict) -> dict:
+    width = max(1, int(region["width"]))
+    height = max(1, int(region["height"]))
+
+    left_pad = max(28, int(width * 2.2))
+    right_pad = max(12, int(width * 0.3))
+    top_pad = max(10, int(height * 0.55))
+    bottom_pad = max(10, int(height * 0.55))
+
+    left = max(0, int(region["x"]) - left_pad)
+    top = max(0, int(region["y"]) - top_pad)
+    right = int(region["x"]) + width + right_pad
+    bottom = int(region["y"]) + height + bottom_pad
+
+    return {
+        "left": left,
+        "top": top,
+        "width": max(1, right - left),
+        "height": max(1, bottom - top),
+    }
+
+
+def get_template_paths(templates_dir: str, tracker_key: str) -> tuple[str, str]:
+    base_name = f"{tracker_key}-template"
+    return (
+        os.path.join(templates_dir, f"{base_name}.png"),
+        os.path.join(templates_dir, f"{base_name}.json"),
+    )
+
+
+def ensure_templates_dir(templates_dir: str) -> bool:
+    if not templates_dir:
+        emit_error("Template storage path is missing.")
+        return False
+
+    os.makedirs(templates_dir, exist_ok=True)
+    return True
+
+
+def save_template(tracker_key: str, region: dict, templates_dir: str) -> bool:
+    if not ensure_templates_dir(templates_dir):
+        return False
+
+    capture_region = build_template_capture_region(region)
+    offset_x = int(region["x"]) - capture_region["left"]
+    offset_y = int(region["y"]) - capture_region["top"]
+
+    with mss.mss() as sct:
+        screenshot = sct.grab(capture_region)
+        capture_image = Image.frombytes("RGB", screenshot.size, screenshot.rgb)
+
+    anchor_right = max(20, offset_x - 4)
+    if anchor_right >= capture_image.width:
+        anchor_right = max(20, int(capture_image.width * 0.6))
+
+    anchor_image = capture_image.crop((0, 0, anchor_right, capture_image.height))
+    template_image_path, template_meta_path = get_template_paths(templates_dir, tracker_key)
+
+    anchor_image.save(template_image_path)
+
+    metadata = {
+        "trackerKey": tracker_key,
+        "captureRegion": capture_region,
+        "anchorWidth": anchor_image.width,
+        "anchorHeight": anchor_image.height,
+        "ocrOffsetX": offset_x,
+        "ocrOffsetY": offset_y,
+        "ocrWidth": int(region["width"]),
+        "ocrHeight": int(region["height"]),
+    }
+
+    with open(template_meta_path, "w", encoding="utf8") as file:
+        json.dump(metadata, file, indent=2)
+
+    emit(
+        {
+            "type": "template-learned",
+            "trackerKey": tracker_key,
+            "anchorWidth": anchor_image.width,
+            "anchorHeight": anchor_image.height,
+        }
+    )
+    return True
+
+
+def load_template(tracker_key: str, templates_dir: str) -> Optional[dict]:
+    if not templates_dir:
+        return None
+
+    template_image_path, template_meta_path = get_template_paths(templates_dir, tracker_key)
+    if not os.path.exists(template_image_path) or not os.path.exists(template_meta_path):
+        return None
+
+    try:
+        with open(template_meta_path, "r", encoding="utf8") as file:
+            metadata = json.load(file)
+    except (OSError, json.JSONDecodeError):
+        return None
+
+    template_image = cv2.imread(template_image_path, cv2.IMREAD_GRAYSCALE)
+    if template_image is None:
+        return None
+
+    metadata["image"] = template_image
+    return metadata
+
+
+def detect_template_region(
+    screen_gray: np.ndarray,
+    screen_origin: tuple[int, int],
+    template_data: dict,
+) -> Optional[dict]:
+    template_image = template_data["image"]
+    if template_image.size == 0:
+        return None
+
+    best_match: Optional[dict] = None
+    template_height, template_width = template_image.shape[:2]
+
+    for scale in (0.8, 0.9, 1.0, 1.1, 1.25):
+        scaled_width = max(12, int(template_width * scale))
+        scaled_height = max(12, int(template_height * scale))
+
+        if scaled_width >= screen_gray.shape[1] or scaled_height >= screen_gray.shape[0]:
+            continue
+
+        interpolation = cv2.INTER_CUBIC if scale >= 1 else cv2.INTER_AREA
+        scaled_template = cv2.resize(template_image, (scaled_width, scaled_height), interpolation=interpolation)
+        result = cv2.matchTemplate(screen_gray, scaled_template, cv2.TM_CCOEFF_NORMED)
+        _min_value, max_value, _min_location, max_location = cv2.minMaxLoc(result)
+
+        if best_match is None or max_value > best_match["score"]:
+            best_match = {
+                "score": float(max_value),
+                "location": max_location,
+                "scale": scale,
+                "width": scaled_width,
+                "height": scaled_height,
+            }
+
+    if best_match is None or best_match["score"] < 0.58:
+        return None
+
+    screen_x, screen_y = screen_origin
+    scale = best_match["scale"]
+    region = {
+        "x": int(screen_x + best_match["location"][0] + template_data["ocrOffsetX"] * scale),
+        "y": int(screen_y + best_match["location"][1] + template_data["ocrOffsetY"] * scale),
+        "width": max(1, int(template_data["ocrWidth"] * scale)),
+        "height": max(1, int(template_data["ocrHeight"] * scale)),
+    }
+
+    return {
+        "region": region,
+        "score": round(best_match["score"], 4),
+    }
+
+
+def detect_regions(trackers: dict, templates_dir: str) -> dict:
+    if not templates_dir:
+        return {}
+
+    with mss.mss() as sct:
+        displays = sct.monitors[1:]
+        if not displays:
+            return {}
+
+        union_left = min(display["left"] for display in displays)
+        union_top = min(display["top"] for display in displays)
+        union_right = max(display["left"] + display["width"] for display in displays)
+        union_bottom = max(display["top"] + display["height"] for display in displays)
+
+        screenshot = sct.grab(
+            {
+                "left": union_left,
+                "top": union_top,
+                "width": union_right - union_left,
+                "height": union_bottom - union_top,
+            }
+        )
+
+    screen_bgr = np.array(screenshot)[:, :, :3]
+    screen_gray = cv2.cvtColor(screen_bgr, cv2.COLOR_BGR2GRAY)
+
+    detections: dict[str, dict] = {}
+    for tracker_key in trackers.keys():
+        template_data = load_template(tracker_key, templates_dir)
+        if template_data is None:
+            continue
+
+        match = detect_template_region(screen_gray, (union_left, union_top), template_data)
+        if match is not None:
+            detections[tracker_key] = match
+
+    return detections
 
 
 def focus_crystals_region(image: Image.Image) -> Image.Image:
@@ -257,13 +461,52 @@ def update_config() -> None:
         except queue.Empty:
             break
 
-        if command.get("type") != "config":
+        command_type = command.get("type")
+
+        if command_type == "config":
+            with config_lock:
+                config.trackers = command.get("trackers", {})
+                config.poll_interval_ms = max(150, int(command.get("pollIntervalMs", 650)))
+                config.scanner_enabled = bool(command.get("scannerEnabled", True))
+                config.templates_dir = str(command.get("templatesDir", "") or "")
             continue
 
-        with config_lock:
-            config.trackers = command.get("trackers", {})
-            config.poll_interval_ms = max(150, int(command.get("pollIntervalMs", 650)))
-            config.scanner_enabled = bool(command.get("scannerEnabled", True))
+        if command_type == "learn-template":
+            with config_lock:
+                templates_dir = config.templates_dir
+            tracker_key = str(command.get("trackerKey", "") or "")
+            region = command.get("region")
+            if tracker_key and isinstance(region, dict):
+                try:
+                    save_template(tracker_key, region, templates_dir)
+                except Exception as error:
+                    emit_error(f"Failed to learn template for {tracker_key}: {error}")
+            continue
+
+        if command_type == "detect-regions":
+            request_id = command.get("requestId")
+            with config_lock:
+                trackers = dict(config.trackers)
+                templates_dir = config.templates_dir
+
+            try:
+                detections = detect_regions(trackers, templates_dir)
+                emit(
+                    {
+                        "type": "detect-result",
+                        "requestId": request_id,
+                        "detections": detections,
+                    }
+                )
+            except Exception as error:
+                emit(
+                    {
+                        "type": "detect-result",
+                        "requestId": request_id,
+                        "error": str(error),
+                        "detections": {},
+                    }
+                )
 
 
 def capture_loop() -> None:

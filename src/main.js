@@ -22,9 +22,11 @@ let pythonProcess;
 let overlayHidden = false;
 let pythonStdoutBuffer = "";
 let configPath;
+let templatesDir;
 let store = { ...CONFIG_DEFAULTS };
 let pendingSelectionTrackerKey = null;
 let updateCheckTimer = null;
+let pendingDetectionRequests = new Map();
 
 function getAppIconPath() {
   return path.join(__dirname, "..", "build", "icon.ico");
@@ -48,6 +50,7 @@ function normalizeTrackers(trackers) {
 
 function loadStore() {
   configPath = path.join(app.getPath("userData"), "config.json");
+  templatesDir = path.join(app.getPath("userData"), "templates");
   try {
     const raw = fs.readFileSync(configPath, "utf8");
     const parsed = JSON.parse(raw);
@@ -294,6 +297,13 @@ function restartPythonWorker() {
     for (const line of lines) {
       try {
         const message = JSON.parse(line.trim());
+        if (message.type === "detect-result" && message.requestId) {
+          const pendingRequest = pendingDetectionRequests.get(message.requestId);
+          if (pendingRequest) {
+            pendingDetectionRequests.delete(message.requestId);
+            pendingRequest(message);
+          }
+        }
         sendOverlayEvent(message);
       } catch (error) {
         sendOverlayEvent({
@@ -336,10 +346,106 @@ function sendConfigToPython() {
     type: "config",
     trackers: normalizeTrackers(getStoreValue("trackers")),
     pollIntervalMs: getStoreValue("pollIntervalMs"),
-    scannerEnabled: getStoreValue("scannerEnabled")
+    scannerEnabled: getStoreValue("scannerEnabled"),
+    templatesDir
   };
 
   pythonProcess.stdin.write(`${JSON.stringify(payload)}\n`);
+}
+
+function sendPythonCommand(payload) {
+  if (!pythonProcess || !pythonProcess.stdin.writable) {
+    return false;
+  }
+
+  pythonProcess.stdin.write(`${JSON.stringify(payload)}\n`);
+  return true;
+}
+
+function learnTemplateForTracker(trackerKey, region) {
+  sendPythonCommand({
+    type: "learn-template",
+    trackerKey,
+    region
+  });
+}
+
+function applyDetectedRegions(detections, overwriteExisting = true) {
+  const trackers = normalizeTrackers(getStoreValue("trackers"));
+  const applied = [];
+
+  for (const [trackerKey, detection] of Object.entries(detections || {})) {
+    if (!trackers[trackerKey] || !detection?.region) {
+      continue;
+    }
+
+    if (!overwriteExisting && trackers[trackerKey].region) {
+      continue;
+    }
+
+    trackers[trackerKey].region = detection.region;
+    applied.push({
+      trackerKey,
+      trackerLabel: trackers[trackerKey].label ?? trackerKey,
+      region: detection.region,
+      score: detection.score ?? null
+    });
+  }
+
+  if (applied.length === 0) {
+    return [];
+  }
+
+  store.trackers = trackers;
+  persistStore();
+
+  for (const entry of applied) {
+    sendOverlayEvent({
+      type: "region-selected",
+      trackerKey: entry.trackerKey,
+      trackerLabel: entry.trackerLabel,
+      region: entry.region,
+      score: entry.score,
+      autoDetected: true
+    });
+  }
+
+  sendConfigToPython();
+  return applied;
+}
+
+function detectRegionsWithTemplates() {
+  return new Promise((resolve) => {
+    const requestId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    pendingDetectionRequests.set(requestId, resolve);
+
+    const sent = sendPythonCommand({
+      type: "detect-regions",
+      requestId
+    });
+
+    if (!sent) {
+      pendingDetectionRequests.delete(requestId);
+      resolve({
+        requestId,
+        error: "Scanner is not ready yet.",
+        detections: {}
+      });
+      return;
+    }
+
+    setTimeout(() => {
+      const pendingRequest = pendingDetectionRequests.get(requestId);
+      if (pendingRequest) {
+        pendingDetectionRequests.delete(requestId);
+        pendingRequest({
+          requestId,
+          error: "Template detection timed out.",
+          detections: {}
+        });
+      }
+    }, 15000);
+  });
 }
 
 ipcMain.handle("app:get-state", async () => {
@@ -374,6 +480,34 @@ ipcMain.handle("app:set-scanner-enabled", async (_event, scannerEnabled) => {
   setStoreValue("scannerEnabled", enabled);
   sendConfigToPython();
   return { ok: true, scannerEnabled: enabled };
+});
+
+ipcMain.handle("app:auto-detect-regions", async (_event, options) => {
+  const overwriteExisting = Boolean(options?.overwriteExisting);
+  const result = await detectRegionsWithTemplates();
+
+  if (result.error) {
+    sendOverlayEvent({
+      type: "auto-detect-summary",
+      ok: false,
+      message: result.error
+    });
+    return { ok: false, message: result.error, applied: [] };
+  }
+
+  const applied = applyDetectedRegions(result.detections, overwriteExisting);
+  sendOverlayEvent({
+    type: "auto-detect-summary",
+    ok: true,
+    applied,
+    detectedCount: Object.keys(result.detections || {}).length
+  });
+
+  return {
+    ok: true,
+    applied,
+    detectedCount: Object.keys(result.detections || {}).length
+  };
 });
 
 ipcMain.handle("app:update-settings", async (_event, settings) => {
@@ -487,6 +621,7 @@ ipcMain.on("selector:confirm", (_event, region) => {
   const tracker = trackers[trackerKey];
 
   setTrackerRegion(trackerKey, region);
+  learnTemplateForTracker(trackerKey, region);
   if (overlayWindow && !overlayWindow.isDestroyed()) {
     overlayWindow.webContents.send("scanner:event", {
       type: "region-selected",
