@@ -1,6 +1,6 @@
 {
   "name": "screen-number-scanner",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "author": "prdxqcy",
   "description": "Electron overlay app with a Python OCR scanner for live number tracking.",
   "main": "src/main.js",
@@ -14,7 +14,7 @@
   },
   "build": {
     "appId": "com.prdxqcy.ocrscanner",
-    "productName": "OCR Scanner",
+    "productName": "FarmTracker",
     "files": [
       "build/icon.ico",
       "src/**/*",
@@ -33,8 +33,8 @@
     ],
     "extraFiles": [
       {
-        "from": "build/OCR Scanner Launcher.vbs",
-        "to": "OCR Scanner Launcher.vbs"
+        "from": "build/FarmTracker Launcher.vbs",
+        "to": "FarmTracker Launcher.vbs"
       }
     ],
     "artifactName": "${productName}-Setup-${version}.${ext}",

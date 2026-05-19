@@ -5,6 +5,6 @@ Set fileSystem = CreateObject("Scripting.FileSystemObject")
 environment.Remove "ELECTRON_RUN_AS_NODE"
 
 installDir = fileSystem.GetParentFolderName(WScript.ScriptFullName)
-appPath = fileSystem.BuildPath(installDir, "OCR Scanner.exe")
+appPath = fileSystem.BuildPath(installDir, "FarmTracker.exe")
 
 shell.Run """" & appPath & """", 1, False
